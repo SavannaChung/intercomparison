@@ -72,7 +72,8 @@ def fetch_ndw(DATABASE_DIR, table_name, col, col_1,chno, col_2,  *,  PWD):
     try:
         cursor.execute(sql, params)
         result = cursor.fetchone()
-        result = result[0][0]
+        result = result[0]
+        print(f'results: {result, type(result)}')
 
         # Close the cursor and connection
         cursor.close()

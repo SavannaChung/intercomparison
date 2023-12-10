@@ -22,9 +22,13 @@ ele_ranges = ["Medium", "High", "Low"]
 material = ['water', 'solid water (RW3)']
 
 # NDW
-# 3126: last calib date = 2021-05-13
-# 3132: last calib date = 2021-05-13
-ndw = {"3126": 84800000, "3132": 83700000}
+# 3126: last calib date = 2023-08-24
+# 3132: last calib date = 2023-08-24
+ss_ndws = {"3126": 84700000, "3132": 83600000}
+
+# 3128: last calib : 2023-10-24
+#3131: last calib: 2023-10-24
+f_ndws = {"3128": 83200000, "3131": 82900000, "3132": 83600000, "3735": 0, "3736": 0}
 
 # proton energiesdir
 pro_en = ['240', '210', '180', '170', '160', '110', '70']
@@ -34,7 +38,7 @@ pro_en = ['240', '210', '180', '170', '160', '110', '70']
 
 # restore to May-2023 working now. cannot connect to database after adding a sheet
 # DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\copies\AssetsDatabaseInProgressSAVANNA.accdb"
-# DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\copies\AssetsDatabaseSAVANNA_be.accdb"
+DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\copies\AssetsDatabaseSAVANNA_be.accdb"
 
 
 # not working
@@ -42,7 +46,7 @@ pro_en = ['240', '210', '180', '170', '160', '110', '70']
 # DATABASE_DIR = r"C:\Users\KAWCHUNG\Desktop\AssetsDatabaseInProgressSAVANNA.accdb"
 
 # copy the database from one drive to O: for AGr to test
-DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\modified_by_KC\AssetsDatabaseSAVANNA_be.accdb"
+# DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\modified_by_KC\AssetsDatabaseSAVANNA_be.accdb"
 #
 PWD = "Pr0ton5%"
 # PWD = "JoNiSi"

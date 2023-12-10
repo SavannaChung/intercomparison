@@ -53,10 +53,10 @@ def make_blocks(prefix, pro_en, nM, s):
         k = '-'+ prefix +'_'+ key+'-'
         if key == 'TPC':
             top_row.append(sg.Text(factors[key], size = (7,1), font = ('Bold', 9), justification = 'left'))
-            top_row.append(sg.InputText(key = k, size = (7,1), enable_events = True, readonly = True))
+            top_row.append(sg.InputText(key = k, size = (7,1), disabled_readonly_background_color='lightgrey', enable_events = True, readonly = True))
         else:
             top_row.append(sg.Text(factors[key], size = (7,1), font = ('Bold', 9), justification = 'left'))
-            top_row.append(sg.InputText(key = k, size = (7,1), enable_events = True))
+            top_row.append(sg.InputText(key = k, disabled_readonly_background_color='lightgrey', size = (7,1), enable_events = True))
 
     block = []
     nitems = [str(n) for n in range(1, nM+1)]
@@ -86,11 +86,83 @@ def make_blocks(prefix, pro_en, nM, s):
             sk = '-' + k + '_' + en + '-'
             # "do not edit" the AVE and STD cells
             if 'AVE' in sk or 'STD' in sk:
-                dict[k].append([sg.InputText(key = sk, size =s, enable_events=True, readonly = True)])
+                dict[k].append([sg.InputText(key = sk, size =s, disabled_readonly_background_color='lightgrey', enable_events=True, readonly = True)])
             else:
                 dict[k].append([sg.InputText(key = sk, size =s, enable_events=True)])
 
     return energy, top_row, dict
+#
+# def calc_fndws(values):
+    ''' calculate the field NDW from all energies using ss, ssr and f objects '''
+
+    ss = Chamber('ss', values)
+    f = Chamber('f', values)
+    ssr = Chamber('ssr', values)
+
+    ss_tot = []
+    f_ndws = []
+    for en in cg.pro_en:
+        ss_tot = [] # empty the list
+
+        # put all ss tpc corrected nRs in the same list
+        ss_tot.extend(ss.tpc_nRs[en])
+        ss_tot.extend(ssr.tpc_nRs[en])
+        # calculate the ss average
+        ss_ave = sum(ss_tot)/len(ss_tot)
+
+        # calc f ave
+        f_ave = sum(f.tpc_nRs[en])/len(f.tpc_nRs[en])
+        # calc field ndw
+        f_ndw =  (ss.ssndw* 1e-9 *ss_ave)/(f_ave)
+
+        f_ndws.append(f_ndw)
+
+    f_ndw_ave = 1e9*(sum(f_ndws)/ len(f_ndws))
+
+    return f_ndw_ave
+
+def calc_percent_diff(org, new):
+    ''' calculate the percentage difference. return a percentage '''
+    val = 100*(new - org)/org
+
+    val = round(val, 3) # three decimal place
+
+    return val
+
+def check_3dp(str):
+    ''' A function to check the event values has 3 decimal place'''
+
+    try:
+        if len(str.split('.')[1]) >=3:
+            return True
+    except:
+        print(f'the value does not have 3 dp')
+        return False
+
+def update_chamber_ndw(ch_dict):
+    ''' 1.) update chamber NDWS in config 2.) extract the ndw_fetch_msg
+        ch_dict = cg.ss_ndws  or cg.f_ndws
+        cf = False (fail to connect with db) or = float
+        ndw_fetch_msg  = string. message on report and GUI
+
+    '''
+
+    chambers = list(ch_dict.keys())
+    for ch in chambers:
+        ss_chno = f'%_{ch}_%' # ss chamber number
+
+        # get calibration factor
+        cf = db.fetch_ndw(cg.DATABASE_DIR, table_name='Calibration', col='CalFactor', col_1='Equipment' ,chno=ss_chno, col_2 = 'Cal Date',  PWD=cg.PWD)
+
+        # update config ss or f chamber dictionaries
+        if cf == False:
+            ndw_fetch_msg = 'Unable to fetch NDW factor from database. PLEASE check the chamber specific NDW factor on iPASSPORT.'
+            print(f'failed to fetech the {ch} NDW from database')
+        else:
+            ch_dict[ch] = cf
+            ndw_fetch_msg = 'NDW factor successfully fetched from database.'
+
+    return cf, ndw_fetch_msg
 
 def make_GUI(theme):
     """ make a gui for data-entering
@@ -111,25 +183,16 @@ def make_GUI(theme):
     #operators
     operators = db.fetch_db(cg.DATABASE_DIR, 'Operators', 'Initials', PWD=cg.PWD)
     if operators == False:
-        sg.popup_yes_no("Unable to fetch operators from database. \n Operator list may not be up to date.", title = "YesNo")
+        sg.popup_ok("Unable to fetch operators from database. \n Operator list may not be up to date.")
         operators = cg.operators
 
     print(operators)
 
-    # electrometer range
-    # ele_ranges = cg.ele_range
-
-    # NDW calibration factor
-    cal_factor = db.fetch_ndw(cg.DATABASE_DIR, table_name='Calibration', col='CalFactor', col_1='Equipment' ,chno='%_3126_%', col_2 = 'Cal Date',  PWD=cg.PWD)
-    if cal_factor == False:
-        sg.popup_yes_no("Unable to fetch NDW from database. \n ", title = "YesNo")
-        ndw_fetch_msg = 'Unable to fetch NDW factor from database. PLEASE check the chamber specific NDW factor on iPASSPORT.'
-    else:
-        ndw_fetch_msg = 'NDW factor sucessfully fetched from database.'
-
+    # update NDW calibration factors + update the data in config
+    cal_factor, ndw_fetch_msg = update_chamber_ndw(cg.ss_ndws) # ss
+    f_cal_factor, f_ndw_fetch_msg = update_chamber_ndw(cg.f_ndws) # f
 
     # # GUI
-
     # for column 1
     current_datetime = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
     date = [sg.Text('Date/ time:', size = (10, 1)), \
@@ -153,7 +216,7 @@ def make_GUI(theme):
     ss_ele_voltage = [sg.Text('Electrometer voltage (ss,V): ', size = (24,1)), sg.InputText(key = '-SS_ELE_VOLT-', default_text = '-200', size = (7,1))]
 
     # for column 4 (field)
-    fch = [sg.Text('Chambers (Field): ', size = (24,1)), sg.Combo(values= fchambers,  key = '-FCH-', size = (7,1))]
+    fch = [sg.Text('Chambers (Field): ', size = (24,1)), sg.Combo(values= fchambers,  key = '-FCH-', size = (7,1), enable_events=True)]
     f_electrometers = [sg.Text('Electrometers (f): ', size = (24,1)), sg.Combo(values= electrometers,  key = '-F_ELE-', size = (7,1))]
     f_ele_range = [sg.Text('Electrometer range (f): ', size = (24,1)), sg.Combo(values= cg.ele_ranges,  key = '-F_ELE_RANGE-', default_value = "Medium", size = (7,1))]
     f_ele_voltage = [sg.Text('Electrometer voltage (f, V): ', size = (24,1)), sg.InputText(key = '-F_ELE_VOLT-', default_text = '-200', size = (7,1))]
@@ -176,16 +239,19 @@ def make_GUI(theme):
     # set InputText to state = 'disabled' to freeze the cell (no changes )
     if cal_factor == False:
         ndw_text = [sg.Text(ndw_fetch_msg, font = ('MS Sans Serif', 5, 'bold'), text_color='red')]
-        ndw = [sg.Text('ssNDW: ', size=(10,1)), sg.InputText(key = '-NDW-',  size = (10,1), readonly = True)]
     else:
         ndw_text = [sg.Text(ndw_fetch_msg, font = ('MS Sans Serif', 5, 'bold'), text_color='blue')]
-        ndw = [sg.Text('ssNDW: ', size=(10,1)), sg.InputText(key = '-NDW-', default_text = str(cal_factor[0]), size = (10,1), readonly = True)]
+
+    # ss, f previous and calculated ndw
+    all_ndw = [sg.Text('ssNDW: ', size=(10,1)), sg.InputText(key = '-NDW-',  disabled_readonly_background_color='lightgrey', size = (10,1), readonly = True), \
+                    sg.Text('previous_fNDW: ', size=(10,1)), sg.InputText(key = '-PREV-fNDW-', disabled_readonly_background_color='lightgrey', size = (10,1), readonly = True), \
+                    sg.Text('calc_fNDW: ', size=(10,1)), sg.InputText(key = '-CALC-fNDW-', disabled_readonly_background_color='lightgrey', size = (10,1), readonly = True)]
 
 
     # information layout
     layout = [
             [sg.Frame('Measurement details: ', [[sg.Column(col_1, justification ='left'), sg.Column(col_2, justification ='left'), sg.Column(col_3, justification ='left'), sg.Column(col_4, justification ='left'), sg.Column(comments, justification = 'left')]], size = (1700, 150))],
-            [sg.Frame('ss NDW calibration factor', [ndw_text, ndw], size = (1700, 80))]
+            [sg.Frame('ss NDW calibration factor', [ndw_text, all_ndw ], size = (1700, 80))]
             ]
 
     ## data entry
@@ -221,12 +287,11 @@ def make_GUI(theme):
         ens.append([sg.Text(e, size = (5, 1))])
 
     ndw_frame = [sg.Frame('NDW', [[sg.Text('unit: Gy/nC', font = ('MS Sans Serif', 6, 'bold'))]], size = (150, 50))] # make the frame same size as the TPC to keep formal
-
     ndws = [[sg.Text('NDW',  font = ('MS Sans Serif', 4, 'bold'))]]
 
     for en in cg.pro_en:
         k = '-f_ndw' + '_' + en + '-'
-        ndws.append([sg.InputText(key = k, size = s, enable_events=True, readonly = True)])
+        ndws.append([sg.Input(key = k, size = (7,1), background_color='lightgrey')])
 
     ndw_block = [sg.Column(ens, justification = 'left'), sg.Column(ndws, justification = 'left')]
     fndw_frame = sg.Frame('Results', [ndw_frame, ndw_block], size = (150, 300))
@@ -278,7 +343,7 @@ def make_GUI(theme):
         if event == '-MATERIAL-':
             if values['-MATERIAL-'] == 'water':
                 window['-SSCH-'].update('3126')
-                window['-NDW-'].update(str(cg.ndw['3126']))
+                window['-NDW-'].update(str(round(1e-9*cg.ss_ndws['3126'], 5)))
 
     # if op1 is empty and op2 is not
         if event =='-PERSON2-':
@@ -292,11 +357,20 @@ def make_GUI(theme):
 
     # if -SSCH- is '3132', set the -MATERIAL- to 'solid water (RW3)'
         if event == '-SSCH-':
-            if values['-SSCH-'] == '3132':
+            chamber_no = values['-SSCH-']
+            n = 1e-9*cg.ss_ndws[chamber_no]
+            n = '{:.5f}'.format(n)
+            window['-NDW-'].update(str(n))
+
+            if chamber_no == '3132':
                 window['-MATERIAL-'].update('solid water (RW3)')
-                window['-NDW-'].update(str(cg.ndw['3132']))
-            elif values['-SSCH-'] == '3126':
-                window['-NDW-'].update(str(cg.ndw['3126']))
+
+    # update the field NDW in '-PREV-fNDW-'
+        if event == '-FCH-':
+            n = 1e-9*cg.f_ndws[values['-FCH-']]
+            n = '{:.5f}'.format(n)
+            window['-PREV-fNDW-'].update(str(n))
+
 
         if 'PRESSURE' in event:
             try:
@@ -360,28 +434,11 @@ def make_GUI(theme):
             except:
                 print(f'fail to update the -AVE- and -STD-')
 
-
-        # # check operator input 5 for ss, 5 for f and 3 for ssr
-        # if  event == 'Check Data': # last entry
-        #
-        #     # check ndw measured
-        #     try:
-        #         ssChamber = Chamber('ss', values)
-        #         fChamber = Chamber('f', values)
-        #         ssrChamber = Chamber('ssr', values)
-        #
-        #         ndw, ndw_outcome = calc_ndw(ssChamber, fChamber, ssrChamber)
-        #
-        #         print(f'ndw:{ndw}')
-        #         print(f'ndw_outcome: {ndw_outcome}')
-        #
-        #         if ndw_outcome[0] == True:
-        #             sg.popup_ok(f'The average ndw from {ndw_outcome[1:]} seems not to be within 2 std of the ndw mean from all other energies. Could you check your measured number/ remeasure those values? ')
-        #     except:
-        #         print(f'fail to calculate NDW')
-
-        if bool(re.search('-ssrR3_', event)) == True:
+        # if bool(re.search('-ssrR3_', event)) == True:
+        if '-ssrR3_' in event:
+            '''calculate field ndw for each energy and update the value on GUI window'''
             try:
+
                 # get energy
                 en = event.split('_')[1][:-1]
 
@@ -397,38 +454,68 @@ def make_GUI(theme):
                             # calculate TPC corrected nR
                             key_tpc = '-' + k + '_TPC-'
                             tpc = float(values[key_tpc]) # get tpc
-                            nR_tpc_corr = tpc*float(values[key]) # corrected ready with TPC
+                            nR_tpc_corr = tpc*float(values[key]) # TPC corrected reading
 
                             if k == 'ss' or k == 'ssr':
                                 ss_tot.append(nR_tpc_corr)
                             elif k == 'f':
                                 f.append(nR_tpc_corr)
 
-                print(f'ss_tot: {ss_tot}')
-                print(f'f: {f}')
-                print(f'ssr energy: {en}')
-
-                # calculate the average
+                # calculate the average with TPC
                 ss_ave = round(sum(ss_tot)/len(ss_tot), 5)
                 f_ave = round(sum(f)/len(f), 5)
 
-                print(f'ss_ave:{ss_ave} , f_ave:{f_ave}')
-
-                f_ndw = (float(values['-NDW-'])*1e-9)*ss_ave/f_ave
-
-                print(f'f_ndw: {f_ndw}')
+                f_ndw = (float(values['-NDW-']))*ss_ave/f_ave
+                # round it to 4 decimal place
+                f_ndw = round(f_ndw, 5)
 
                 key_fndw = '-f_ndw' + '_' + en + '-'
-                window[key_fndw].update(str(f_ndw))
-
-
-
-
-
-
+                window[key_fndw].update(f_ndw)
 
             except:
                 print(f'fail to calculate ndw')
+
+        if event == 'Check Data':
+            # if we have the NDW factor for 70 MeV, check the measured NDW are within tolerance
+            try:
+                ndws = []
+                for e in cg.pro_en:
+                    k = f'-f_ndw_{e}-'
+                    v = float(values[k])
+                    ndws.append(v)
+
+                # calculate average and std for ndw
+                ndw_ave = sum(ndws)/len(ndws)
+                ndw_std = calc_sample_std(ndws)
+
+                # update '-CALC-fNDW-'
+                if ndw_ave:
+                    ndw_ave = '{:.5f}'.format(ndw_ave)
+                    window['-CALC-fNDW-'].update(str(ndw_ave))
+
+                utol = ndw_ave + 2*ndw_std # upper tolerance
+                ltol = ndw_ave - 2*ndw_std # lower tolerance
+
+                print(f'ndw_std : {ndw_std}, utol: {utol}, ltol: {ltol}')
+
+
+                for i, v in enumerate(ndws):
+                    if v > utol or v < ltol:
+                        en = cg.pro_en[i]
+                        k = '-f_ndw_%s-' % en
+                        sg.popup_ok(f'please review {en} data. Average NDW exceeds two stds.')
+                        window[k].update(values[k],background_color ='red')
+                    else:
+                        window[k].update(values[k],background_color ='lightgrey')
+            except:
+                print(f'fail to calculate the average NDW .')
+
+
+
+
+
+
+
         # window.close()
 
     return event, values, ndw_fetch_msg, window
@@ -440,11 +527,45 @@ class Chamber:
         self.pressure = float(values['-' + self.prefix +'_PRESSURE-'])
         self.tpc = float(values['-' + self.prefix +'_TPC-'])
 
+
+        # make nR and tpc corrected nR
+        if prefix == 'ssr':
+            nM = range(1, 4)
+        else:
+            nM = range(1, 6)
+
+        nR_dict = {}
+        tpc_nR_dict = {}
+        for en in cg.pro_en:
+            ls = []
+            tpc_ls = []
+            for n in nM:
+                k = '-' + self.prefix + 'R' + str(n) + '_' + en + '-'
+                v = float(values[k])
+                ls.append(v)
+
+                tpc_v = v*self.tpc
+                tpc_ls.append(tpc_v)
+
+            nR_dict.update({en: ls})
+            tpc_nR_dict.update({en: tpc_ls})
+
+        self.nRs = nR_dict
+        self.tpc_nRs = tpc_nR_dict
+
         if prefix == 'f':
             self.chamber_no = values['-' + self.prefix.upper()+ 'CH-' ]
             self.electrometer = values['-' + self.prefix.upper() + '_ELE-']
             self.ele_range = values['-' + self.prefix.upper() + '_ELE_RANGE-']
             self.voltage = values['-' + self.prefix.upper() + '_ELE_VOLT-']
+
+            # fetch f_ndw per energy from Values (they are TPC corrected. see make_GUI() in function.py)
+            fndws = {} # a dictionary for ndw calculated for different energies
+            for en in cg.pro_en:
+                k = f'-f_ndw_{en}-'
+                fndws.update({int(en): float(values[k])})
+
+            self.fndws = fndws
 
         else:
             self.chamber_no = values['-SSCH-' ]
@@ -454,22 +575,8 @@ class Chamber:
             self.ssndw = float(values['-NDW-'])
 
 
-        if prefix == 'ssr':
-            nM = range(1, 4)
-        else:
-            nM = range(1, 6)
+        # field chamber NDW
 
-        nR_dict = {}
-        for en in cg.pro_en:
-            ls = []
-            for n in nM:
-                k = '-' + self.prefix + 'R' + str(n) + '_' + en + '-'
-                v = values[k]
-                ls.append(float(v))
-
-            nR_dict.update({en: ls})
-
-        self.nRs = nR_dict
 
 def calc_ave_std(dict, tpc):
     ''' calculate the average and std for each proton energy
@@ -487,7 +594,7 @@ def calc_ave_std(dict, tpc):
 
     return d_ave, d_std
 
-def calc_ndw(ss, f, ssr):
+# def calc_ndw(ss, f, ssr):
     ''' ss, f and ssr : objects Chamber
         we applied tpc correction on the nR from ss and ssr chamber.
         we calculate the ave, std from the combined nR (sst_nR = ss + ssr)
@@ -558,32 +665,5 @@ def calc_ndw(ss, f, ssr):
     else:
         ndw_outcome.append(False)
 
-
-
-
-
-
-
-    #
-    # print(f'sst_ave: {sst_ave}')
-    # print(f'f_ave: {f_ave}')
-    # print(f'ndw: {ndw}')
-
-    # calculate the average nR from ss_tot
-
-    # sst_ave, sst_std = calc_ave_std()
-    ## assign those things to a variable to avoid update the object
-    # ss_ave, ss_std = calc_ave_std(ss.nRs, ss.tpc)
-    # f_ave, f_std = calc_ave_std(f.nRs, f.tpc)
-    # ssr_ave, ssr_std = calc_ave_std(ssr.nRs, ssr.tpc)
-    #
-    # # considering all ss measurement for ndw calculation
-    # ndw = {}
-    # for e in cg.pro_en:
-    #     # calculate the average nR from ss + ssr
-    #     v = (ss_ave[e] + ssr_ave[e])/2
-    #
-    #     fndw = (v/f_ave[e])*(ss.ssndw *1e-9)
-    #     ndw.update({e: fndw})
 
     return ndw, ndw_outcome
