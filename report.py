@@ -20,7 +20,6 @@ import config as cg
 
 width, height = letter
 
-
 def instrument_summary(values, tp):
     ''' make a summary table of ss and f instrument
         Report = object '''
@@ -53,13 +52,12 @@ def instrument_summary(values, tp):
     else:
         # if we have previous ndw in the database, calculate the percentage difference
         ndw = [Paragraph('N<sub>D,W</sub> (Gy/nC) in database', tp), values['-NDW-'], values['-PREV-fNDW-'] ]
-        calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC)', tp), '-', f_ndw_str + '±' + std_str]
+        calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC)', tp), '-', f_ndw_str + ' ± ' + std_str]
         percent_diff = ['% diff (%): ', '-', str(fn.calc_percent_diff(float(values['-PREV-fNDW-']), f_ndw_ave)) + '%']
 
     rows = [top_row, chambers, electrometer, ele_voltage, ele_range, ndw, calc_f_ndw, percent_diff]
 
     return rows
-
 
 def tabulate_data(values, np):
     ''' make a table to store the data'''
@@ -235,6 +233,7 @@ class Report:
         story.append(Paragraph('Operator(s): ' + self.operators, self.np))
         story.append(Paragraph('Material: ' + self.values['-MATERIAL-'], self.np))
         story.append(Paragraph('Humidity: ' + self.values['-HUMIDITY-'], self.np))
+        story.append(Paragraph('Comment: ' + self.values['-COMMENT-'], self.np))
 
         # add an empty line
         story.append(Spacer(1, 5))
@@ -257,7 +256,7 @@ class Report:
                                 where N<sub>D,W</sub>(ss) is the secondary standard N<sub>D,W</sub>, \
                                 mR<sub>ss</sub> and mR<sub>f</sub> are average nCs measured by a ss and f chambers, respectively.\
                                 The former calculates from eight ss measurements,and the latter calculates from five measurements. \
-                                TPC factors were used to calculate mRs. ", self.np))
+                                TPC factors were applied to calculate mRs. ", self.np))
         story.append(Spacer(1, 5))
 
 
@@ -269,7 +268,7 @@ class Report:
                                ('BOX', (0, 0), (0, -1), 2, colors.black), ('BOX', (0, 0), (-1, 0), 2, colors.black)]))
 
         story.append(table_instrument)
-        story.append(Paragraph('Table 1: Measurement parameters for secondary standard and field chambers. The calc N<sub>D,W</sub>(f) presents as average N<sub>D,W</sub>(f) from all energies ± σ. ', self.np))
+        story.append(Paragraph('Table 1: Measurement parameters for the secondary standard and field chambers. The calc N<sub>D,W</sub>(f) presents as average N<sub>D,W</sub>(f) from all energies ± σ. ', self.np))
 
         # show fndws.png
         im_fndws = Image(self.fndws_path, width = 4*inch,  height = 2.8*inch,   hAlign = 'CENTER')
@@ -290,7 +289,7 @@ class Report:
                                ('BOX', (0, 0), (0, -1), 2, colors.black), ('BOX', (0, 0), (-1, 0), 2, colors.black)]))
 
         story.append(table_data)
-        story.append(Paragraph('Table 2: The average (±σ, equation 2) TPC corrected nC in secondary standard (ss), repeated secondary standard (ssr) and field (f) sections. ', self.np))
+        story.append(Paragraph('Table 2: The average (±σ, from equation 2) TPC corrected nC of secondary standard (ss), repeated secondary standard (ssr) and field (f) sections. ', self.np))
 
         # show stds equation
         im_std = Image(self.eqt_std_path, width = 2.3*inch,  height = 0.6*inch,   hAlign = 'CENTER')

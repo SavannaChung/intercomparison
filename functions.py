@@ -4,6 +4,8 @@ import database as db
 from datetime import datetime
 import PySimpleGUI as sg
 import re
+import os
+import csv
 
 import config as cg
 
@@ -129,22 +131,21 @@ def calc_percent_diff(org, new):
 
     return val
 
-def check_3dp(str):
-    ''' A function to check the event values has 3 decimal place'''
-
-    try:
-        if len(str.split('.')[1]) >=3:
-            return True
-    except:
-        print(f'the value does not have 3 dp')
-        return False
+# def check_3dp(str):
+#     ''' A function to check the event values has 3 decimal place'''
+#
+#     try:
+#         if len(str.split('.')[1]) >=3:
+#             return True
+#     except:
+#         print(f'the value does not have 3 dp')
+#         return False
 
 def update_chamber_ndw(ch_dict):
     ''' 1.) update chamber NDWS in config 2.) extract the ndw_fetch_msg
         ch_dict = cg.ss_ndws  or cg.f_ndws
         cf = False (fail to connect with db) or = float
         ndw_fetch_msg  = string. message on report and GUI
-
     '''
 
     chambers = list(ch_dict.keys())
@@ -157,7 +158,7 @@ def update_chamber_ndw(ch_dict):
         # update config ss or f chamber dictionaries
         if cf == False:
             ndw_fetch_msg = 'Unable to fetch NDW factor from database. PLEASE check the chamber specific NDW factor on iPASSPORT.'
-            print(f'failed to fetech the {ch} NDW from database')
+            print(f'failed to fetch the {ch} NDW from database')
         else:
             ch_dict[ch] = cf
             ndw_fetch_msg = 'NDW factor successfully fetched from database.'
@@ -178,15 +179,11 @@ def make_GUI(theme):
     #electrometer
     electrometers = cg.electrometers
 
-    # # proton energy
-
     #operators
     operators = db.fetch_db(cg.DATABASE_DIR, 'Operators', 'Initials', PWD=cg.PWD)
     if operators == False:
         sg.popup_ok("Unable to fetch operators from database. \n Operator list may not be up to date.")
         operators = cg.operators
-
-    print(operators)
 
     # update NDW calibration factors + update the data in config
     cal_factor, ndw_fetch_msg = update_chamber_ndw(cg.ss_ndws) # ss
@@ -201,9 +198,7 @@ def make_GUI(theme):
     person_1 = [sg.Text('Operator 1: ', size = (10,1)), sg.Combo(values= operators, key = '-PERSON1-', size = (10,1), enable_events=True)]
     person_2 = [sg.Text('Operator 2: ',  size = (10,1)), sg.Combo(values= operators, key = '-PERSON2-',  size = (10,1), enable_events=True)]
 
-
     # for column 2
-
     gantries = [sg.Text('Gantry: ',  size = (10,1)), sg.Combo(values= cg.gantries, key = '-GANTRY-',  size = (10,1))]
     gantry_angles = [sg.Text('Gantry angle: ',  size = (10,1)), sg.Combo(values = cg.gantry_angles, key = '-GA-', default_value = '0', size = (10,1))]
     material = [sg.Text('Material: ', size = (10,1)), sg.Combo(values= cg.material, key = '-MATERIAL-', size = (10,1), enable_events=True)]
@@ -232,7 +227,18 @@ def make_GUI(theme):
     col_3 = [ ssch, ss_electrometers, ss_ele_range, ss_ele_voltage]
     col_4 = [ fch, f_electrometers, f_ele_range, f_ele_voltage]
 
+    # information layout
+    layout = [
+            [sg.Frame('Measurement details: ', [[sg.Column(col_1, justification ='left'), sg.Column(col_2, justification ='left'), sg.Column(col_3, justification ='left'), sg.Column(col_4, justification ='left'), sg.Column(comments, justification = 'left')]], size = (1700, 150))]
+            ]
 
+    # report saving location frame
+    loc = [sg.Text('Report location:', size = (24, 1))]
+    browse_loc = [sg.InputText(key = '-RESULT_LOC-'), sg.FolderBrowse()]
+    loc_frame = [sg.Frame('Location', [loc, browse_loc], size = (1700, 100))]
+
+    # append the location
+    layout.append(loc_frame)
 
     # NDW factor
     # add ndw text to the GUI. Flag it as red if fetching NDW from database is not sucessful.
@@ -249,10 +255,7 @@ def make_GUI(theme):
 
 
     # information layout
-    layout = [
-            [sg.Frame('Measurement details: ', [[sg.Column(col_1, justification ='left'), sg.Column(col_2, justification ='left'), sg.Column(col_3, justification ='left'), sg.Column(col_4, justification ='left'), sg.Column(comments, justification = 'left')]], size = (1700, 150))],
-            [sg.Frame('ss NDW calibration factor', [ndw_text, all_ndw ], size = (1700, 80))]
-            ]
+    layout.append([sg.Frame('ss NDW calibration factor', [ndw_text, all_ndw ], size = (1700, 80))])
 
     ## data entry
     parameters = {'ss':5, 'f':5, 'ssr':3}
@@ -300,13 +303,12 @@ def make_GUI(theme):
     frames.append(fndw_frame)
     layout.append(frames)
 
-    # report saving location frame
-    loc = [sg.Text('Report location:', size = (24, 1))]
-    browse_loc = [sg.InputText(key = '-RESULT_LOC-'), sg.FolderBrowse()]
-    loc_frame = [sg.Frame('Location', [loc, browse_loc], size = (1700, 100))]
+    # load csv (optional)
+    csv_loc = [sg.Text('CSV location:', size = (24, 1))]
+    csv_browse_loc = [sg.InputText(key = '-CSV_LOC-'), sg.FileBrowse(), sg.Button('Load CSV')]
+    csv_loc_frame = [sg.Frame('Location', [csv_loc, csv_browse_loc], size = (1700, 100))]
 
-    # append the location
-    layout.append(loc_frame)
+    layout.append(csv_loc_frame)
 
     # # add measurement blocks into the GUI
     # # Buttons
@@ -330,7 +332,6 @@ def make_GUI(theme):
             window.close()
             break
 
-        # updating the GUI according to GUI input
 
         # if -DATETIME- is triggered, ensure it is in "%Y-%m-%d %H:%M:%S"
         if event == '-DATETIME-':
@@ -353,7 +354,6 @@ def make_GUI(theme):
 
             except:
                 print(f'Fail to detect operator 2.')
-
 
     # if -SSCH- is '3132', set the -MATERIAL- to 'solid water (RW3)'
         if event == '-SSCH-':
@@ -493,8 +493,8 @@ def make_GUI(theme):
                     ndw_ave = '{:.5f}'.format(ndw_ave)
                     window['-CALC-fNDW-'].update(str(ndw_ave))
 
-                utol = ndw_ave + 2*ndw_std # upper tolerance
-                ltol = ndw_ave - 2*ndw_std # lower tolerance
+                utol = float(ndw_ave) + 2*float(ndw_std) # upper tolerance
+                ltol = float(ndw_ave) - 2*float(ndw_std) # lower tolerance
 
                 print(f'ndw_std : {ndw_std}, utol: {utol}, ltol: {ltol}')
 
@@ -502,21 +502,86 @@ def make_GUI(theme):
                 for i, v in enumerate(ndws):
                     if v > utol or v < ltol:
                         en = cg.pro_en[i]
-                        k = '-f_ndw_%s-' % en
+                        k = "-f_ndw_%s-" % en
                         sg.popup_ok(f'please review {en} data. Average NDW exceeds two stds.')
-                        window[k].update(values[k],background_color ='red')
+                        window[k].update(background_color="red")
+
                     else:
                         window[k].update(values[k],background_color ='lightgrey')
             except:
                 print(f'fail to calculate the average NDW .')
 
+            # check values['-RESULT_LOC-'] is not empty
+            try:
+                if values['-RESULT_LOC-']:
+                    pass
+            except:
+                sg.popup_ok(f'your report/ result dir is empty! Please input the directory to save your report. ')
+
+            # check essential intput
+            try:
+                for k in list(values.keys()):
+                    if values[k]:
+                        pass
+                    else:
+                        if k in ['-PERSON2-', '-CSV_LOC-', '-COMMENT-', 'DATE + TIME', 'Browse', 'Browse0','-CALC-fNDW-' ]:
+                            pass
+                        else:
+                            sg.popup_ok(f'please fill in {k}')
 
 
+                # window.close()
+
+            except:
+                print(f'fail to check essential input')
 
 
+        # auto save gui entry to a csv
+        if '_70' in event:
+
+            mdate = str(datetime.strptime(values['-DATETIME-'], '%Y-%m-%d %H:%M:%S').date())
+            mdate = mdate.replace('-', '_')
+
+            csv_name = 'IC_' + mdate + '_SS_' +  values['-SSCH-'] + '_F_' + values['-FCH-'] + '.csv'
+
+            try:
+                # try to navigate to '-RESULT_LOC-'
+                saving_path = values['-RESULT_LOC-']
+                if saving_path:
+                    os.chdir(saving_path)
+
+                else: # if saving path is empty, save the csv in download foler
+                    user_home_dir = os.path.expanduser('~')
+                    download_dir = os.path.join(user_home_dir, 'Downloads')
+
+                    os.chdir(download_dir)
+
+                with open(csv_name,'w') as f:
+                    w = csv.writer(f)
+                    w.writerows(values.items())
+
+            except:
+                print(f'cannot export the output GUI entry to a csv')
+                sg.popup_ok('cannot export the output GUI entry to a csv.')
 
 
-        # window.close()
+        if event == 'Load CSV':
+        # read csv
+            try:
+
+            # try to read the csv to a dictionary
+
+                with open(values['-CSV_LOC-'], newline = '') as file:
+                    reader = csv.reader(file)
+
+                    for row in reader:
+                        if row:
+                            window[row[0]].update(row[1])
+
+            except:
+                print(f'fail to load a csv')
+                sg.popup_ok('cannot load the csv.')
+
 
     return event, values, ndw_fetch_msg, window
 
@@ -576,7 +641,6 @@ class Chamber:
 
 
         # field chamber NDW
-
 
 def calc_ave_std(dict, tpc):
     ''' calculate the average and std for each proton energy
@@ -667,3 +731,23 @@ def calc_ave_std(dict, tpc):
 
 
     return ndw, ndw_outcome
+
+def make_window_after_reviewing_data(theme):
+    sg.theme(theme)
+    text = [sg.Text('Please review your spot position data! If you have any comments, please write down below.')]
+    comment2 = [sg.Text('Comments: '), sg.InputText(size = (50, 1), key = '-COMMENT2-')]
+
+    text1 = [sg.Text('Press SUBMIT to push the data to the proton database!')]
+
+    # buttons
+    button_submit = [sg.Button('Submit')]
+    button_cancel = [sg.Button('Cancel')]
+
+    # layout = [ text, comment2, button_submit + button_cancel]
+
+    layout = [[sg.Frame('IMPORTANT', [text, comment2], size = (550, 80))],
+              [sg.Frame('Data to database', [text1, button_submit + button_cancel], size = (550,80))]]
+
+    window = sg.Window('Data reviewing:' , layout, finalize = True)
+
+    return window

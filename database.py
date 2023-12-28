@@ -1,5 +1,6 @@
 import pypyodbc
 import pandas as pd
+from datetime import datetime
 
 import config as cg
 
@@ -13,9 +14,9 @@ def connect_db(DATABASE_DIR, PWD):
         connection = 'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=%s;PWD=%s'%(DATABASE_DIR,PWD)
         conn = pypyodbc.connect(connection)
         cursor =  conn.cursor()
-        # print(f'connection : {connection}')
-        # print(f'conn: {conn}')
-        # print(f'cursor: {cursor}')
+    # print(f'connection : {connection}')
+    # print(f'conn: {conn}')
+    # print(f'cursor: {cursor}')
     except:
         return False, False
         print(f'>> cannot connect with the database. Bye~')
@@ -83,3 +84,155 @@ def fetch_ndw(DATABASE_DIR, table_name, col, col_1,chno, col_2,  *,  PWD):
         print(f'Fail to fetch NDW. You want to add this to the report')
 
     return result
+
+def make_session_data(values):
+    ''' make session data as a list
+        session data = [Date/time(YYY-MM-DD HH:MM:SS),
+                        operator_1(str),
+                        operator_2(str),
+                        Gantry (number),
+                        Gantry angle (number),
+                        ssChamber (str),
+                        ssElectrometer (str),
+                        ssElectrometer_range (str),
+                        ssElectrometer_voltage (number),
+                        fChamber (str),
+                        fElectrometer (str),
+                        fElectrometer_range (str),
+                        fElectrometer_voltage (number),
+                        ss_NDW (number),
+                        f_NDW (number),
+                        Material (str),
+                        humidity (number),
+                        comment (str) ]'''
+
+    adate = datetime.strptime(values['-DATETIME-'], '%Y-%m-%d %H:%M:%S')
+
+
+    session_entry = [adate, values['-PERSON1-'], values['-PERSON2-'], int(values['-GANTRY-']), int(values['-GA-']), \
+                    values['-SSCH-'], values['-SS_ELE-'], values['-SS_ELE_RANGE-'], int(values['-SS_ELE_VOLT-']), \
+                    values['-FCH-'], values['-F_ELE-'], values['-F_ELE_RANGE-'], int(values['-F_ELE_VOLT-']), \
+                    float(values['-NDW-'])*1e9, float(values['-CALC-fNDW-'])*1e9, values['-MATERIAL-'], float(values['-HUMIDITY-']), \
+                    values['-COMMENT-']]
+
+
+    return session_entry
+
+def push_session_data(DATABASE_DIR, session_data,  PWD = cg.PWD ):
+    ''' DATABASE_DIR >> path_to_.accdb
+        session_data >> a list [AData, MachineName,  Device, gantry angle, Operator1, Operator2, Comments]'''
+
+    conn, cursor = connect_db(DATABASE_DIR , PWD = cg.PWD)
+
+    sql = '''
+          INSERT INTO RoosCalib_session VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          '''
+
+    # try:
+    cursor.execute(sql, session_data)
+    conn.commit()
+    return True
+    # except:
+    #     print(f' >> fail to push intercomparison session result to session table in the ASSESS database')
+    #     return False
+
+def make_measurement_data(values):
+    ''' prepare the measurement data for database
+        for each energy = [ADate(YYY-MM-DD HH:MM:SS),
+                           Energy (number),
+                           ssTemperature (Number),
+                           ssPressure (Number),
+                           ssR1 (number),
+                           ssR2 (number),
+                           ssR3 (number),
+                           ssR4 (number),
+                           ssR5 (number),
+                           ssrTemperature (number),
+                           ssrPressure (number),
+                           ssrR6 (number),
+                           ssrR7 (number),
+                           ssrR8 (number),
+                           fTemperature (number),
+                           fPressure (number),
+                           fR1 (number),
+                           fR2 (number),
+                           fR3 (number),
+                           fR4 (number),
+                           fR5 (number)
+
+        ]
+    '''
+    adate = datetime.strptime(values['-DATETIME-'], '%Y-%m-%d %H:%M:%S')
+
+    all_data = []
+    '-ss_TEMP-'
+    '-ss_PRESSURE-'
+    tp = ['TEMP', 'PRESSURE']
+    prefix = {'ss': 5, 'ssr': 3, 'f':5}
+
+    for en in cg.pro_en:
+        row = []
+        row.append(adate)
+        row.append(float(en))
+
+        for p in list(prefix.keys()):
+            for c in tp: # add temperature and pressure
+                k = '-' + p + '_' + c + '-'
+                row.append(float(values[k]))
+
+            for i in range(1, prefix[p] + 1):
+                k1 = '-' + p + 'R' + str(i) + '_' + en + '-'
+                row.append(float(values[k1]))
+
+        all_data.append(row)
+
+    return all_data
+
+
+
+def push_measurement_data(DATABASE_DIR, data, PWD = cg.PWD ):
+    ''' DATABASE_DIR >> path_to_.accdb
+        data >> a nested list. for each list: [ADate(YYY-MM-DD HH:MM:SS),
+                                               Energy (number),
+                                               ssTemperature (Number),
+                                               ssPressure (Number),
+                                               ssR1 (number),
+                                               ssR2 (number),
+                                               ssR3 (number),
+                                               ssR4 (number),
+                                               ssR5 (number),
+                                               ssrTemperature (number),
+                                               ssrPressure (number),
+                                               ssrR6 (number),
+                                               ssrR7 (number),
+                                               ssrR8 (number),
+                                               fTemperature (number),
+                                               fPressure (number),
+                                               fR1 (number),
+                                               fR2 (number),
+                                               fR3 (number),
+                                               fR4 (number),
+                                               fR5 (number)
+        ]
+        '''
+
+    conn, cursor = connect_db(DATABASE_DIR, PWD = cg.PWD)
+
+    sql = '''
+          INSERT INTO RoosCalib_data VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+
+          '''
+
+    try:
+
+        for nr in data:
+
+            cursor.execute(sql, nr)
+            conn.commit()
+
+            print(f'>> {nr[1]} MeV results are pushed to the database ')
+
+        return True
+    except:
+        print(f' >> fail to push the {nr[1]} intercomparison results to spot data table in the ASSESS database')
+        return False
