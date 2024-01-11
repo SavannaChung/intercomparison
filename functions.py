@@ -157,6 +157,7 @@ def update_chamber_ndw(ch_dict):
 
         # update config ss or f chamber dictionaries
         if cf == False:
+            ch_dict[ch] = 0
             ndw_fetch_msg = 'Unable to fetch NDW factor from database. PLEASE check the chamber specific NDW factor on iPASSPORT.'
             print(f'failed to fetch the {ch} NDW from database')
         else:
@@ -368,8 +369,12 @@ def make_GUI(theme):
     # update the field NDW in '-PREV-fNDW-'
         if event == '-FCH-':
             n = 1e-9*cg.f_ndws[values['-FCH-']]
-            n = '{:.5f}'.format(n)
-            window['-PREV-fNDW-'].update(str(n))
+
+            if n == 0:
+                n = str(0)
+            else:
+                n = '{:.5f}'.format(n)
+                window['-PREV-fNDW-'].update(str(n))
 
 
         if 'PRESSURE' in event:

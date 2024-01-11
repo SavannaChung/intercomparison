@@ -48,7 +48,7 @@ def instrument_summary(values, tp):
 
         ndw = [Paragraph('N<sub>D,W</sub> (Gy/nC) in database:', tp), values['-NDW-'], '-' ]
         calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC): ', tp), '-', '-' ]
-        percent_diff = ['% diff (%): ', '-', f_ndw_ave + '%']
+        percent_diff = ['% diff (%): ', '-', str(f_ndw_ave) + '%']
     else:
         # if we have previous ndw in the database, calculate the percentage difference
         ndw = [Paragraph('N<sub>D,W</sub> (Gy/nC) in database', tp), values['-NDW-'], values['-PREV-fNDW-'] ]
@@ -292,11 +292,11 @@ class Report:
         story.append(Paragraph('Table 2: The average (±σ, from equation 2) TPC corrected nC of secondary standard (ss), repeated secondary standard (ssr) and field (f) sections. ', self.np))
 
         # show stds equation
-        im_std = Image(self.eqt_std_path, width = 2.3*inch,  height = 0.6*inch,   hAlign = 'CENTER')
+        im_std = Image(self.eqt_std_path, width = 1.7*inch,  height = 0.8*inch,   hAlign = 'CENTER')
         story.append(im_std)
 
         story.append(Paragraph("Equation 2 calculates standard deviation (σ) for TPC corrected mR<sub>ss</sub>, mR<sub>ssr</sub>, mR<sub>f</sub>, and N<sub>D,W</sub>(f). \
-                                where σ is the sample standard deviation, N is the total number of observations, x<sub>i</sub> is the observed value of sample i and x&#772 is \
+                                where σ is the sample standard deviation, N is the total number of observations, x<sub>i</sub> is the observed value of sample i and x is \
                                 the mean value of all observations.", self.np))
         story.append(Spacer(1, 10))
 

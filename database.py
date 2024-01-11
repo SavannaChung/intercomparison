@@ -81,6 +81,7 @@ def fetch_ndw(DATABASE_DIR, table_name, col, col_1,chno, col_2,  *,  PWD):
         conn.close()
 
     except:
+        result = 0 # if it is a new chamber, reture 0
         print(f'Fail to fetch NDW. You want to add this to the report')
 
     return result
