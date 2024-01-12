@@ -42,17 +42,18 @@ def instrument_summary(values, tp):
     electrometer = ['Electrometer: ',values['-SS_ELE-'], values['-F_ELE-']]
     ele_voltage = ['Voltage: ', values['-SS_ELE_VOLT-'], values['-F_ELE_VOLT-']]
     ele_range = ['Ele. range: ', values['-SS_ELE_RANGE-'], values['-F_ELE_RANGE-']]
+    calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC)', tp), '-', f_ndw_str + ' ± ' + std_str]
 
-    if values['-PREV-fNDW-'] == 0:
+    if values['-PREV-fNDW-'] == "":
         # if no previous ndw record for f chamber, this could be a new chamber. display '-'
 
         ndw = [Paragraph('N<sub>D,W</sub> (Gy/nC) in database:', tp), values['-NDW-'], '-' ]
-        calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC): ', tp), '-', '-' ]
-        percent_diff = ['% diff (%): ', '-', str(f_ndw_ave) + '%']
+        # calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC): ', tp), '-', str(f_ndw_ave)+ '%' ]
+        percent_diff = ['% diff (%): ', '-',  '-']
     else:
         # if we have previous ndw in the database, calculate the percentage difference
         ndw = [Paragraph('N<sub>D,W</sub> (Gy/nC) in database', tp), values['-NDW-'], values['-PREV-fNDW-'] ]
-        calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC)', tp), '-', f_ndw_str + ' ± ' + std_str]
+        # calc_f_ndw = [Paragraph('calc. N<sub>D,W</sub> (Gy/nC)', tp), '-', f_ndw_str + ' ± ' + std_str]
         percent_diff = ['% diff (%): ', '-', str(fn.calc_percent_diff(float(values['-PREV-fNDW-']), f_ndw_ave)) + '%']
 
     rows = [top_row, chambers, electrometer, ele_voltage, ele_range, ndw, calc_f_ndw, percent_diff]

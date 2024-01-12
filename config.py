@@ -12,7 +12,7 @@ gantry_angles = ['0', '90', '180', '270']
 sschambers = ["3126", "3132"]
 
 # field chamber
-fchambers = ["3128", "3131", "3132"]
+fchambers = ["3128", "3131", "3132", "3735", "3736"]
 
 # electrometer
 electrometers = ["92579", "92580", "92581"]
