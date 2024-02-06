@@ -135,7 +135,8 @@ class Report:
 
         # gantry angle
         gantry_angle = values['-GA-']
-        report_name = 'IC_%s_G%s_GA%s_%s.pdf' % (self.date, self.values['-GANTRY-'], self.values['-GA-'], self.operators)
+        gantry_no = self.values['-GANTRY-'].split(" ")[1]
+        report_name = 'IC_%s_G%s_GA%s_%s.pdf' % (self.date, str(gantry_no), self.values['-GA-'], self.operators)
         self.report_name = report_name
 
         self.doc = SimpleDocTemplate(self.report_name,pagesize=letter,
@@ -229,7 +230,7 @@ class Report:
         report_title = ' %s intercomparison report' % self.values['-FCH-']
         story.append(Paragraph(report_title, self.hp))
         story.append(Paragraph('Date: ' + self.values['-DATETIME-'], self.np))
-        story.append(Paragraph('Gantry:' + self.values['-GANTRY-'], self.np))
+        story.append(Paragraph('Gantry: ' + self.values['-GANTRY-'], self.np))
         story.append(Paragraph('Gantry angle: ' + self.values['-GA-'], self.np))
         story.append(Paragraph('Operator(s): ' + self.operators, self.np))
         story.append(Paragraph('Material: ' + self.values['-MATERIAL-'], self.np))

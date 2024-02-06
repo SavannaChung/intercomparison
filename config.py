@@ -2,7 +2,7 @@
 operators = ['AB', 'AG', 'AGr', 'AK',  'AT', 'AW', 'CB', 'CG', '-KC-', 'KLM', 'PI', 'SC', 'SG', 'TNC', 'VN', 'QK' ]
 
 # gantries
-gantries = ['1', '2', '3', '4']
+gantries = ['Gantry 1', 'Gantry 2', 'Gantry 3', 'Gantry 4']
 
 gantry_angles = ['0', '90', '180', '270']
 
@@ -34,7 +34,7 @@ f_ndws = {"3128": 83590000, "3131": 83300000, "3132": 83600000, "3735": 0, "3736
 pro_en = ['240', '210', '180', '170', '160', '110', '70']
 
 # # Real proton database. back end.
-# DATABASE_DIR = r"\\9.40.120.20\\rtassetBE\AssetsDatabase_be.accdb"
+DATABASE_DIR = r"\\9.40.120.20\\rtassetBE\AssetsDatabase_be.accdb"
 
 # restore to May-2023 working now. cannot connect to database after adding a sheet
 # DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\copies\AssetsDatabaseInProgressSAVANNA.accdb"
@@ -44,13 +44,10 @@ pro_en = ['240', '210', '180', '170', '160', '110', '70']
 # DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\modified_by_KC\AssetsDatabaseSAVANNA_be.accdb"
 
 # round 1 - working
-DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\modified_by_KC_round1\AssetsDatabaseSAVANNA_be.accdb"
+# DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\modified_by_KC_round1\AssetsDatabaseSAVANNA_be.accdb"
 # not working
 # DATABASE_DIR = r"C:\Users\KAWCHUNG\OneDrive - NHS\database_assess\AssetsDatabaseSAVANNA_be.accdb"
 # DATABASE_DIR = r"C:\Users\KAWCHUNG\Desktop\AssetsDatabaseInProgressSAVANNA.accdb"
-
-# copy the database from one drive to O: for AGr to test
-# DATABASE_DIR = r"O:\protons\Work in Progress\KC\Access\modified_by_KC\AssetsDatabaseSAVANNA_be.accdb"
 #
 # PWD = "Pr0ton5%"
 PWD = "JoNiSi"

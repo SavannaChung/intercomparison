@@ -91,7 +91,7 @@ def make_session_data(values):
         session data = [Date/time(YYY-MM-DD HH:MM:SS),
                         operator_1(str),
                         operator_2(str),
-                        Gantry (number),
+                        Gantry (str),
                         Gantry angle (number),
                         ssChamber (str),
                         ssElectrometer (str),
@@ -110,7 +110,7 @@ def make_session_data(values):
     adate = datetime.strptime(values['-DATETIME-'], '%Y-%m-%d %H:%M:%S')
 
 
-    session_entry = [adate, values['-PERSON1-'], values['-PERSON2-'], int(values['-GANTRY-']), int(values['-GA-']), \
+    session_entry = [adate, values['-PERSON1-'], values['-PERSON2-'], values['-GANTRY-'], int(values['-GA-']), \
                     values['-SSCH-'], values['-SS_ELE-'], values['-SS_ELE_RANGE-'], int(values['-SS_ELE_VOLT-']), \
                     values['-FCH-'], values['-F_ELE-'], values['-F_ELE_RANGE-'], int(values['-F_ELE_VOLT-']), \
                     float(values['-NDW-'])*1e9, float(values['-CALC-fNDW-'])*1e9, values['-MATERIAL-'], float(values['-HUMIDITY-']), \

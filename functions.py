@@ -529,7 +529,7 @@ def make_GUI(theme):
                     if values[k]:
                         pass
                     else:
-                        if k in ['-PERSON2-', '-CSV_LOC-', '-COMMENT-', 'DATE + TIME', 'Browse', 'Browse0','-CALC-fNDW-' ]:
+                        if k in ['-PERSON2-', '-CSV_LOC-', '-COMMENT-', 'DATE + TIME', 'Browse', 'Browse0','-CALC-fNDW-', '-PREV-fNDW-' ]:
                             pass
                         else:
                             sg.popup_ok(f'please fill in {k}')
@@ -739,7 +739,7 @@ def calc_ave_std(dict, tpc):
 
 def make_window_after_reviewing_data(theme):
     sg.theme(theme)
-    text = [sg.Text('Please review your spot position data! If you have any comments, please write down below.')]
+    text = [sg.Text('Please review your intercomparison data! If you have any comments, please write down below.')]
     comment2 = [sg.Text('Comments: '), sg.InputText(size = (50, 1), key = '-COMMENT2-')]
 
     text1 = [sg.Text('Press SUBMIT to push the data to the proton database!')]
