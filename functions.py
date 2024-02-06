@@ -400,6 +400,32 @@ def make_GUI(theme):
             except:
                 print(f'fail to update -TPC-')
 
+        if 'TEMP' in event:
+            ''' update TPC when Temp changes  '''
+            #get prefix -ss_TEMP-
+            p = event.split('_')[0][1:]
+
+            # test whether the entries are string
+            ts = '-' + p + '_' + 'TEMP-'
+            ps = '-' + p + '_' + 'PRESSURE-'
+            tpcs = '-' + p + '_' + 'TPC-'
+
+            try:
+
+                if values[ps]: # pressure exists only temp changes
+
+                    # check temperature and pressure is a float
+                    check_temp = is_float(values[ts])
+                    check_pressure = is_float(values[ps])
+
+                    if check_temp == True and check_pressure ==  True:
+                        tpc = calc_tpc(float(values[ts]), float(values[ps]))
+                        window[tpcs].update(str(tpc))
+
+            except:
+                    print(f'Tempeature changed. fail to update -{p}_TPC-')
+
+
         # automatically update AVE and STD
         if bool(re.search('R[123456]', event)) == True:
             try:
@@ -663,79 +689,79 @@ def calc_ave_std(dict, tpc):
 
     return d_ave, d_std
 
-# def calc_ndw(ss, f, ssr):
-    ''' ss, f and ssr : objects Chamber
-        we applied tpc correction on the nR from ss and ssr chamber.
-        we calculate the ave, std from the combined nR (sst_nR = ss + ssr)
-        if ndw is > pm 2 std, flag energies
-    '''
+# # def calc_ndw(ss, f, ssr):
+#     ''' ss, f and ssr : objects Chamber
+#         we applied tpc correction on the nR from ss and ssr chamber.
+#         we calculate the ave, std from the combined nR (sst_nR = ss + ssr)
+#         if ndw is > pm 2 std, flag energies
+#     '''
 
-    # merge the ss results. ss_tot = ss + ssr
-    ss_tot = {} # contain all nR data from ss chamber
-    sst_ave = {} # store the average nR per energy data from ss_tot
-    sst_std = {} # store the std nR per energy data from ss_tot
+#     # merge the ss results. ss_tot = ss + ssr
+#     ss_tot = {} # contain all nR data from ss chamber
+#     sst_ave = {} # store the average nR per energy data from ss_tot
+#     sst_std = {} # store the std nR per energy data from ss_tot
 
-    for en in cg.pro_en:
-        l = []
-        for val in ss.nRs[en]:
-            cnR = val*ss.tpc # tpc corrected nR
-            l.append(cnR)
+#     for en in cg.pro_en:
+#         l = []
+#         for val in ss.nRs[en]:
+#             cnR = val*ss.tpc # tpc corrected nR
+#             l.append(cnR)
 
-        for v in ssr.nRs[en]:
-            c_nR = val*ss.tpc # tpc corrected nR
-            l.append(c_nR)
+#         for v in ssr.nRs[en]:
+#             c_nR = val*ss.tpc # tpc corrected nR
+#             l.append(c_nR)
 
-        ss_tot.update({en:l})
+#         ss_tot.update({en:l})
 
-        ave = sum(l)/len(l)
-        sst_ave.update({en:ave})
+#         ave = sum(l)/len(l)
+#         sst_ave.update({en:ave})
 
-        std = calc_sample_std(l)
-        sst_std.update({en:std})
+#         std = calc_sample_std(l)
+#         sst_std.update({en:std})
 
-    # calculate average TPC corrected nR from field chamber
-    f_ave, f_std = calc_ave_std(f.nRs, f.tpc)
+#     # calculate average TPC corrected nR from field chamber
+#     f_ave, f_std = calc_ave_std(f.nRs, f.tpc)
 
-    print(f'f_ave: {f_ave}')
-    print(f'f_std: {f_std}')
+#     print(f'f_ave: {f_ave}')
+#     print(f'f_std: {f_std}')
 
-    # calculate ndw
-    ndw = {}
-    for en in cg.pro_en:
-        n = (ss.ssndw)*(sst_ave[en]/f_ave[en])*1e-9
-        n = round(n, 5)
-        ndw.update({en:n})
+#     # calculate ndw
+#     ndw = {}
+#     for en in cg.pro_en:
+#         n = (ss.ssndw)*(sst_ave[en]/f_ave[en])*1e-9
+#         n = round(n, 5)
+#         ndw.update({en:n})
 
-    print(f'fn.ndw: {ndw}')
+#     print(f'fn.ndw: {ndw}')
 
-    # check all values are within 2 std
-    # output the energy (ies) that does not lie within 2 std
-    ndw_std = calc_sample_std(list(ndw.values()))
+#     # check all values are within 2 std
+#     # output the energy (ies) that does not lie within 2 std
+#     ndw_std = calc_sample_std(list(ndw.values()))
 
-    ndws = list(ndw.values())
-    ave_ndw = sum(ndws)/len(ndws)
+#     ndws = list(ndw.values())
+#     ave_ndw = sum(ndws)/len(ndws)
 
-    print(f'ndws: {ndws}')
-    print(f'ave_ndw: {ave_ndw}')
-    print(f'ndw_std:{ndw_std}')
+#     print(f'ndws: {ndws}')
+#     print(f'ave_ndw: {ave_ndw}')
+#     print(f'ndw_std:{ndw_std}')
 
-    tol = 2*ndw_std
-    print(f'tol: {tol}')
-    print(f'ave_ndw + tol :{ave_ndw + tol}')
-    rmea_en = []
-    for en in cg.pro_en:
-        if ndw[en] > ave_ndw + tol or ndw[en] < ave_ndw - tol:
-            rmea_en.append(en)
+#     tol = 2*ndw_std
+#     print(f'tol: {tol}')
+#     print(f'ave_ndw + tol :{ave_ndw + tol}')
+#     rmea_en = []
+#     for en in cg.pro_en:
+#         if ndw[en] > ave_ndw + tol or ndw[en] < ave_ndw - tol:
+#             rmea_en.append(en)
 
-    ndw_outcome = []
-    if rmea_en:
-        ndw_outcome.append(True)
-        ndw_outcome.extend(rmea_en)
-    else:
-        ndw_outcome.append(False)
+#     ndw_outcome = []
+#     if rmea_en:
+#         ndw_outcome.append(True)
+#         ndw_outcome.extend(rmea_en)
+#     else:
+#         ndw_outcome.append(False)
 
 
-    return ndw, ndw_outcome
+#     return ndw, ndw_outcome
 
 def make_window_after_reviewing_data(theme):
     sg.theme(theme)
